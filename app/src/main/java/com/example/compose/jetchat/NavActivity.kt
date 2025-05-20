@@ -17,7 +17,6 @@
 package com.example.compose.jetchat
 
 import ShakeDetector
-import android.content.Context
 import android.hardware.Sensor
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
@@ -44,7 +43,6 @@ import com.example.compose.jetchat.components.JetchatDrawer
 import com.example.compose.jetchat.databinding.ContentMainBinding
 import kotlinx.coroutines.launch
 import android.hardware.SensorManager
-import android.util.Log
 import androidx.compose.runtime.Composable
 import com.example.compose.jetchat.conversation.ConversationContent
 import com.example.compose.jetchat.conversation.ConversationUiState

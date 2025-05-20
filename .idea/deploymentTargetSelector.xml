@@ -4,10 +4,10 @@
     <selectionStates>
       <SelectionState runConfigName="Jetchat.app">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-05-20T10:01:44.582693600Z">
+        <DropdownSelection timestamp="2025-05-20T12:37:52.398590400Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\KOMPUTER\.android\avd\Pixel_9_Pro.avd" />
+              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\KOMPUTER\.android\avd\Medium_Phone.avd" />
             </handle>
           </Target>
         </DropdownSelection>

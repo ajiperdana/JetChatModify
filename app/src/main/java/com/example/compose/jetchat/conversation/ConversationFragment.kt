@@ -57,7 +57,8 @@ class ConversationFragment : Fragment() {
                     },
                     onNavIconPressed = {
                         activityViewModel.openDrawer()
-                    }
+                    },
+                    mainViewModel = activityViewModel
                 )
             }
         }

@@ -77,6 +77,7 @@ import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -109,12 +110,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.compose.jetchat.FunctionalityNotAvailablePopup
+import com.example.compose.jetchat.MainViewModel
 import com.example.compose.jetchat.R
 import kotlin.math.absoluteValue
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.delay
+
 
 enum class InputSelector {
     NONE,
@@ -133,15 +137,22 @@ enum class EmojiStickerSelector {
 @Preview
 @Composable
 fun UserInputPreview() {
-    UserInput(onMessageSent = {})
+    UserInput(
+        inputText = TextFieldValue(),
+        onInputTextChange = {},
+        onMessageSent = {},
+        resetScroll = {}
+    )
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun UserInput(
+    inputText: TextFieldValue,
+    onInputTextChange: (TextFieldValue) -> Unit,
     onMessageSent: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    resetScroll: () -> Unit = {},
+    resetScroll: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var currentInputSelector by rememberSaveable { mutableStateOf(InputSelector.NONE) }
     val dismissKeyboard = { currentInputSelector = InputSelector.NONE }
@@ -151,9 +162,7 @@ fun UserInput(
         BackHandler(onBack = dismissKeyboard)
     }
 
-    var textState by rememberSaveable(stateSaver = TextFieldValue.Saver) {
-        mutableStateOf(TextFieldValue())
-    }
+
 
     // Used to decide if the keyboard should be shown
     var textFieldFocusState by remember { mutableStateOf(false) }
@@ -161,8 +170,8 @@ fun UserInput(
     Surface(tonalElevation = 2.dp, contentColor = MaterialTheme.colorScheme.secondary) {
         Column(modifier = modifier) {
             UserInputText(
-                textFieldValue = textState,
-                onTextChanged = { textState = it },
+                textFieldValue = inputText,
+                onTextChanged = onInputTextChange,
                 // Only show the keyboard if there's no input selector and text field has focus
                 keyboardShown = currentInputSelector == InputSelector.NONE && textFieldFocusState,
                 // Close extended selector if text field receives focus
@@ -174,9 +183,9 @@ fun UserInput(
                     textFieldFocusState = focused
                 },
                 onMessageSent = {
-                    onMessageSent(textState.text)
+                    onMessageSent(inputText.text)
                     // Reset text field and close keyboard
-                    textState = TextFieldValue()
+                    onInputTextChange(TextFieldValue())
                     // Move scroll to bottom
                     resetScroll()
                 },
@@ -184,11 +193,11 @@ fun UserInput(
             )
             UserInputSelector(
                 onSelectorChange = { currentInputSelector = it },
-                sendMessageEnabled = textState.text.isNotBlank(),
+                sendMessageEnabled = inputText.text.isNotBlank(),
                 onMessageSent = {
-                    onMessageSent(textState.text)
+                    onMessageSent(inputText.text)
                     // Reset text field and close keyboard
-                    textState = TextFieldValue()
+                    onInputTextChange(TextFieldValue())
                     // Move scroll to bottom
                     resetScroll()
                     dismissKeyboard()
@@ -197,7 +206,7 @@ fun UserInput(
             )
             SelectorExpanded(
                 onCloseRequested = dismissKeyboard,
-                onTextAdded = { textState = textState.addText(it) },
+                onTextAdded = { onInputTextChange(inputText.addText(it)) },
                 currentSelector = currentInputSelector
             )
         }
@@ -406,8 +415,8 @@ var SemanticsPropertyReceiver.keyboardShownProperty by KeyboardShownKey
 @Composable
 private fun UserInputText(
     keyboardType: KeyboardType = KeyboardType.Text,
-    onTextChanged: (TextFieldValue) -> Unit,
     textFieldValue: TextFieldValue,
+    onTextChanged: (TextFieldValue) -> Unit,
     keyboardShown: Boolean,
     onTextFieldFocused: (Boolean) -> Unit,
     onMessageSent: (String) -> Unit,
@@ -480,9 +489,10 @@ private fun BoxScope.UserInputTextField(
     modifier: Modifier = Modifier
 ) {
     var lastFocusState by remember { mutableStateOf(false) }
+
     BasicTextField(
         value = textFieldValue,
-        onValueChange = { onTextChanged(it) },
+        onValueChange = onTextChanged,
         modifier = modifier
             .padding(start = 32.dp)
             .align(Alignment.CenterStart)

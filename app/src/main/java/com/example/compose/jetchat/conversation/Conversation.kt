@@ -51,6 +51,7 @@ import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.Button
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -64,6 +65,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -95,6 +97,8 @@ import com.example.compose.jetchat.components.JetchatAppBar
 import com.example.compose.jetchat.data.exampleUiState
 import com.example.compose.jetchat.theme.JetchatTheme
 import kotlinx.coroutines.launch
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.compose.jetchat.MainViewModel
 
 /**
  * Entry point for a conversation screen.
@@ -107,11 +111,15 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ConversationContent(
+    mainViewModel: MainViewModel,
     uiState: ConversationUiState,
     navigateToProfile: (String) -> Unit,
     modifier: Modifier = Modifier,
-    onNavIconPressed: () -> Unit = { }
+    onNavIconPressed: () -> Unit = { },
 ) {
+    //val mainViewModel: MainViewModel = viewModel()
+    val inputText by mainViewModel.inputText.collectAsState()
+
     val authorMe = stringResource(R.string.author_me)
     val timeNow = stringResource(id = R.string.now)
 
@@ -194,7 +202,8 @@ fun ConversationContent(
                             ClipDescription.MIMETYPE_TEXT_PLAIN
                         )
                 }, target = dragAndDropCallback)
-        ) {
+            )
+        {
             Messages(
                 messages = uiState.messages,
                 navigateToProfile = navigateToProfile,
@@ -202,10 +211,13 @@ fun ConversationContent(
                 scrollState = scrollState
             )
             UserInput(
+                inputText = inputText,
+                onInputTextChange = { mainViewModel.updateInputText(it) },
                 onMessageSent = { content ->
                     uiState.addMessage(
                         Message(authorMe, content, timeNow)
                     )
+                    mainViewModel.clearInput() // Optional: clear input after send
                 },
                 resetScroll = {
                     scope.launch {
@@ -216,6 +228,10 @@ fun ConversationContent(
                 // navigation bar
                 modifier = Modifier.navigationBarsPadding().imePadding()
             )
+//            BUTTON FOR TESTING!
+//            Button(onClick = { mainViewModel.removeCurrentWord() }) {
+//                Text("Remove Current Word")
+//            }
         }
     }
 }
@@ -551,16 +567,16 @@ fun ClickableMessage(
     )
 }
 
-@Preview
-@Composable
-fun ConversationPreview() {
-    JetchatTheme {
-        ConversationContent(
-            uiState = exampleUiState,
-            navigateToProfile = { }
-        )
-    }
-}
+//@Preview
+//@Composable
+//fun ConversationPreview() {
+//    JetchatTheme {
+//        ConversationContent(
+//            uiState = exampleUiState,
+//            navigateToProfile = { }
+//        )
+//    }
+//}
 
 @Preview
 @Composable

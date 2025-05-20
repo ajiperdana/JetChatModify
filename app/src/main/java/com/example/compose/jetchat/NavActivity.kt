@@ -16,6 +16,9 @@
 
 package com.example.compose.jetchat
 
+import ShakeDetector
+import android.content.Context
+import android.hardware.Sensor
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -40,12 +43,22 @@ import androidx.navigation.fragment.NavHostFragment
 import com.example.compose.jetchat.components.JetchatDrawer
 import com.example.compose.jetchat.databinding.ContentMainBinding
 import kotlinx.coroutines.launch
+import android.hardware.SensorManager
+import android.util.Log
+import androidx.compose.runtime.Composable
+import com.example.compose.jetchat.conversation.ConversationContent
+import com.example.compose.jetchat.conversation.ConversationUiState
+import com.example.compose.jetchat.data.exampleUiState
 
 /**
  * Main activity for the app.
  */
 class NavActivity : AppCompatActivity() {
-    private val viewModel: MainViewModel by viewModels()
+    private val mainViewModel: MainViewModel by viewModels()
+    private val sensorManager: SensorManager by lazy {
+        getSystemService(SENSOR_SERVICE) as SensorManager
+    }
+    private var shakeDetector: ShakeDetector? = null
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,12 +66,26 @@ class NavActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { _, insets -> insets }
 
+        //ShakeDetector
+        shakeDetector = ShakeDetector {
+            // Called when shake is detected!
+            runOnUiThread {
+                mainViewModel.removeCurrentWord()
+            }
+        }
+
         setContentView(
             ComposeView(this).apply {
                 consumeWindowInsets = false
                 setContent {
+                    AppRoot(
+                        mainViewModel = mainViewModel,
+                        uiState = exampleUiState, // get this from ViewModel or wherever you manage state
+                        navigateToProfile = { /* handle profile navigation */ }
+                    )
+
                     val drawerState = rememberDrawerState(initialValue = Closed)
-                    val drawerOpen by viewModel.drawerShouldBeOpened
+                    val drawerOpen by mainViewModel.drawerShouldBeOpened
                         .collectAsStateWithLifecycle()
 
                     var selectedMenu by remember { mutableStateOf("composers") }
@@ -69,7 +96,7 @@ class NavActivity : AppCompatActivity() {
                             try {
                                 drawerState.open()
                             } finally {
-                                viewModel.resetOpenDrawerAction()
+                                mainViewModel.resetOpenDrawerAction()
                             }
                         }
                     }
@@ -101,9 +128,39 @@ class NavActivity : AppCompatActivity() {
             }
         )
     }
+    @Composable
+    fun AppRoot(
+        mainViewModel: MainViewModel,
+        uiState: ConversationUiState,
+        navigateToProfile: (String) -> Unit,
+        onNavIconPressed: () -> Unit = {},
+    ) {
+        ConversationContent(
+            uiState = uiState,
+            navigateToProfile = navigateToProfile,
+            onNavIconPressed = onNavIconPressed,
+            mainViewModel = mainViewModel
+        )
+    }
 
     override fun onSupportNavigateUp(): Boolean {
         return findNavController().navigateUp() || super.onSupportNavigateUp()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        sensorManager.registerListener(
+            shakeDetector,
+            sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
+            SensorManager.SENSOR_DELAY_UI
+        )
+    }
+
+    override fun onPause() {
+        super.onPause()
+        shakeDetector?.let {
+            sensorManager.unregisterListener(it)
+        }
     }
 
     /**

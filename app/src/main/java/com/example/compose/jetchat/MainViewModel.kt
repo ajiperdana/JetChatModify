@@ -21,7 +21,6 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
@@ -29,10 +28,16 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 class MainViewModel : ViewModel() {
 
+    private val _inputText = MutableStateFlow(TextFieldValue())
+    val inputText = _inputText.asStateFlow()
+
+    private var lastDeletedWord: String? = null
+    private var lastDeletedCursor: Int = 0
+
+
+
     private val _drawerShouldBeOpened = MutableStateFlow(false)
     val drawerShouldBeOpened = _drawerShouldBeOpened.asStateFlow()
-    private val _inputText = MutableStateFlow(TextFieldValue())
-    val inputText: StateFlow<TextFieldValue> = _inputText
 
     fun openDrawer() {
         _drawerShouldBeOpened.value = true
@@ -54,31 +59,20 @@ class MainViewModel : ViewModel() {
 
     fun removeCurrentWord() {
         val tf = _inputText.value
-        val cursor = tf.selection.start
+        val cursor = tf.selection.end
         val text = tf.text
-        Log.d("JETCHAT_DEBUG", "InputText.value: ${text}")
+        if (text.isEmpty() || cursor == 0) return
 
-        if (text.isEmpty()) {
-            Log.d("JETCHAT_DEBUG", "Nothing to remove. Text was empty.")
-            return
-        }
-        if (cursor == 0) {
-            Log.d("JETCHAT_DEBUG", "Nothing to remove. cursor at start.")
-            return
-        }
-
-        // If cursor is in the middle of a word or at the end, still works
         val before = text.substring(0, cursor).lastIndexOf(' ').let { if (it == -1) 0 else it + 1 }
         val after = text.indexOf(' ', cursor).let { if (it == -1) text.length else it }
-        if (before >= after) {
-            // Should not happen, but just in case
-            Log.d("JETCHAT_DEBUG", "No word found to remove. before >= after ($before >= $after)")
-            return
-        }
+        if (before >= after) return
+
+        // Save deleted word for undo
+        lastDeletedWord = text.substring(before, after)
+        lastDeletedCursor = before
+
         val newText = text.removeRange(before, after)
         val newCursor = before
-
-        Log.d("JETCHAT_DEBUG", "removeCurrentWord called. Before: [$text], After: [$newText], Cursor: $cursor -> $newCursor")
 
         _inputText.value = TextFieldValue(
             text = newText,
@@ -86,4 +80,20 @@ class MainViewModel : ViewModel() {
         )
     }
 
+
+    fun redoLastDelete() {
+        val word = lastDeletedWord ?: return
+        val cursor = lastDeletedCursor
+        val currentText = _inputText.value.text
+
+        // Restore the deleted word
+        val newText = StringBuilder(currentText).insert(cursor, word).toString()
+        _inputText.value = TextFieldValue(
+            text = newText,
+            selection = TextRange(cursor + word.length)
+        )
+
+        // Optionally, clear redo state so it can't redo twice
+        lastDeletedWord = null
+    }
 }

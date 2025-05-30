@@ -64,13 +64,12 @@ class NavActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { _, insets -> insets }
 
-        //ShakeDetector
-        shakeDetector = ShakeDetector {
-            // Called when shake is detected!
-            runOnUiThread {
-                mainViewModel.removeCurrentWord()
-            }
-        }
+        //Shake-to-clear executor
+        shakeDetector = ShakeDetector(
+            onDelete = { runOnUiThread { mainViewModel.removeCurrentWord() } },
+            onRedo = { runOnUiThread { mainViewModel.redoLastDelete() } }
+        )
+
 
         setContentView(
             ComposeView(this).apply {
@@ -126,6 +125,7 @@ class NavActivity : AppCompatActivity() {
             }
         )
     }
+
     @Composable
     fun AppRoot(
         mainViewModel: MainViewModel,

@@ -54,12 +54,14 @@ class UserInputTest {
     @Before
     fun setUp() {
         // Launch the conversation screen
+        val mainViewModel = MainViewModel()
         composeTestRule.setContent {
             JetchatTheme {
                 ConversationContent(
                     uiState = exampleUiState,
                     navigateToProfile = { },
-                    onNavIconPressed = { }
+                    onNavIconPressed = { },
+                    mainViewModel = mainViewModel
                 )
             }
         }

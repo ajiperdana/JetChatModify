@@ -115,7 +115,6 @@ fun ConversationContent(
     modifier: Modifier = Modifier,
     onNavIconPressed: () -> Unit = { },
 ) {
-    //val mainViewModel: MainViewModel = viewModel()
     val inputText by mainViewModel.inputText.collectAsState()
 
     val authorMe = stringResource(R.string.author_me)

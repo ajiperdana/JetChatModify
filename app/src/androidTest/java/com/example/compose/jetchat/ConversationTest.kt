@@ -50,12 +50,14 @@ class ConversationTest {
     @Before
     fun setUp() {
         // Launch the conversation screen
+        val mainViewModel = MainViewModel()
         composeTestRule.setContent {
             JetchatTheme(isDarkTheme = themeIsDark.collectAsStateWithLifecycle(false).value) {
                 ConversationContent(
                     uiState = conversationTestUiState,
                     navigateToProfile = { },
-                    onNavIconPressed = { }
+                    onNavIconPressed = { },
+                    mainViewModel = mainViewModel
                 )
             }
         }

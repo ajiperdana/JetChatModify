@@ -22,9 +22,7 @@ import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.material3.DrawerValue.Closed
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -32,7 +30,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.viewinterop.AndroidViewBinding
 import androidx.core.os.bundleOf
 import androidx.core.view.ViewCompat
@@ -43,10 +40,28 @@ import com.example.compose.jetchat.components.JetchatDrawer
 import com.example.compose.jetchat.databinding.ContentMainBinding
 import kotlinx.coroutines.launch
 import android.hardware.SensorManager
+import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 import com.example.compose.jetchat.conversation.ConversationContent
 import com.example.compose.jetchat.conversation.ConversationUiState
 import com.example.compose.jetchat.data.exampleUiState
+import androidx.biometric.BiometricPrompt
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+
 
 /**
  * Main activity for the app.
@@ -58,7 +73,6 @@ class NavActivity : AppCompatActivity() {
     }
     private var shakeDetector: ShakeDetector? = null
 
-    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
@@ -70,60 +84,109 @@ class NavActivity : AppCompatActivity() {
             onRedo = { runOnUiThread { mainViewModel.redoLastDelete() } }
         )
 
+        setContent {
+            var isAuthenticated by remember { mutableStateOf(false) }
+            var showAuthError by remember { mutableStateOf<String?>(null) }
+            var triedAuth by remember { mutableStateOf(false) }
 
-        setContentView(
-            ComposeView(this).apply {
-                consumeWindowInsets = false
-                setContent {
-                    AppRoot(
-                        mainViewModel = mainViewModel,
-                        uiState = exampleUiState, // get this from ViewModel or wherever you manage state
-                        navigateToProfile = { /* handle profile navigation */ }
+            // Show the biometric prompt as soon as the UI is loaded
+            LaunchedEffect(triedAuth) {
+                if (!isAuthenticated && !triedAuth) {
+                    triedAuth = true
+                    showBiometricPrompt(
+                        activity = this@NavActivity,
+                        onAuthSuccess = { isAuthenticated = true },
+                        onAuthError = { error -> showAuthError = error }
                     )
+                }
+            }
 
-                    val drawerState = rememberDrawerState(initialValue = Closed)
-                    val drawerOpen by mainViewModel.drawerShouldBeOpened
-                        .collectAsStateWithLifecycle()
+            if (isAuthenticated) {
+                // Show your main app/chat UI
+                AppRoot(
+                    mainViewModel = mainViewModel,
+                    uiState = exampleUiState, // get this from ViewModel or wherever you manage state
+                    navigateToProfile = { /* handle profile navigation */ }
+                )
 
-                    var selectedMenu by remember { mutableStateOf("composers") }
-                    if (drawerOpen) {
-                        // Open drawer and reset state in VM.
-                        LaunchedEffect(Unit) {
-                            // wrap in try-finally to handle interruption whiles opening drawer
-                            try {
-                                drawerState.open()
-                            } finally {
-                                mainViewModel.resetOpenDrawerAction()
-                            }
+                val drawerState = rememberDrawerState(initialValue = Closed)
+                val drawerOpen by mainViewModel.drawerShouldBeOpened
+                    .collectAsStateWithLifecycle()
+
+                var selectedMenu by remember { mutableStateOf("composers") }
+                if (drawerOpen) {
+                    // Open drawer and reset state in VM.
+                    LaunchedEffect(Unit) {
+                        // wrap in try-finally to handle interruption whiles opening drawer
+                        try {
+                            drawerState.open()
+                        } finally {
+                            mainViewModel.resetOpenDrawerAction()
                         }
                     }
+                }
 
-                    val scope = rememberCoroutineScope()
+                val scope = rememberCoroutineScope()
 
-                    JetchatDrawer(
-                        drawerState = drawerState,
-                        selectedMenu = selectedMenu,
-                        onChatClicked = {
-                            findNavController().popBackStack(R.id.nav_home, false)
-                            scope.launch {
-                                drawerState.close()
-                            }
-                            selectedMenu = it
-                        },
-                        onProfileClicked = {
-                            val bundle = bundleOf("userId" to it)
-                            findNavController().navigate(R.id.nav_profile, bundle)
-                            scope.launch {
-                                drawerState.close()
-                            }
-                            selectedMenu = it
+                JetchatDrawer(
+                    drawerState = drawerState,
+                    selectedMenu = selectedMenu,
+                    onChatClicked = {
+                        findNavController().popBackStack(R.id.nav_home, false)
+                        scope.launch {
+                            drawerState.close()
                         }
-                    ) {
-                        AndroidViewBinding(ContentMainBinding::inflate)
+                        selectedMenu = it
+                    },
+                    onProfileClicked = {
+                        val bundle = bundleOf("userId" to it)
+                        findNavController().navigate(R.id.nav_profile, bundle)
+                        scope.launch {
+                            drawerState.close()
+                        }
+                        selectedMenu = it
+                    }
+                ) {
+                    AndroidViewBinding(ContentMainBinding::inflate)
+                }
+            } else if (showAuthError != null) {
+                // Show error and allow retry
+                Box(
+                    Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Authentication failed: $showAuthError")
+                        Button(onClick = {
+                            showAuthError = null
+                            triedAuth = false // will trigger prompt again
+                        }) {
+                            Text("Retry")
+                        }
+                    }
+                }
+            } else {
+                // --- Splash/Loading/Lock screen ---
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // Replace with your app logo or any splash animation
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            "Welcome to JetChat",
+                            style = MaterialTheme.typography.headlineMedium
+                        )
+                        Spacer(Modifier.height(24.dp))
+                        CircularProgressIndicator()
+                        Spacer(Modifier.height(24.dp))
+                        Text("Please authenticate to continue")
                     }
                 }
             }
-        )
+        }
     }
 
     @Composable
@@ -139,6 +202,37 @@ class NavActivity : AppCompatActivity() {
             onNavIconPressed = onNavIconPressed,
             mainViewModel = mainViewModel
         )
+    }
+
+    private fun showBiometricPrompt(
+        activity: FragmentActivity,
+        onAuthSuccess: () -> Unit,
+        onAuthError: (String) -> Unit
+    ) {
+        val executor = ContextCompat.getMainExecutor(activity)
+        val promptInfo = BiometricPrompt.PromptInfo.Builder()
+            .setTitle("Fingerprint Authentication")
+            .setSubtitle("Authenticate to continue")
+            .setNegativeButtonText("Cancel")
+            .build()
+
+        val biometricPrompt = BiometricPrompt(activity, executor,
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    super.onAuthenticationSucceeded(result)
+                    onAuthSuccess()
+                }
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    super.onAuthenticationError(errorCode, errString)
+                    onAuthError(errString.toString())
+                }
+                override fun onAuthenticationFailed() {
+                    super.onAuthenticationFailed()
+                    // Optional: Toast or feedback
+                }
+            })
+
+        biometricPrompt.authenticate(promptInfo)
     }
 
     override fun onSupportNavigateUp(): Boolean {
@@ -161,9 +255,6 @@ class NavActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * See https://issuetracker.google.com/142847973
-     */
     private fun findNavController(): NavController {
         val navHostFragment =
             supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment

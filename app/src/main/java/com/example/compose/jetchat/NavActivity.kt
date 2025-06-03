@@ -226,10 +226,6 @@ class NavActivity : AppCompatActivity() {
                     super.onAuthenticationError(errorCode, errString)
                     onAuthError(errString.toString())
                 }
-                override fun onAuthenticationFailed() {
-                    super.onAuthenticationFailed()
-                    // Optional: Toast or feedback
-                }
             })
 
         biometricPrompt.authenticate(promptInfo)

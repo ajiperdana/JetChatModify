@@ -48,19 +48,8 @@ import com.example.compose.jetchat.conversation.ConversationContent
 import com.example.compose.jetchat.conversation.ConversationUiState
 import com.example.compose.jetchat.data.exampleUiState
 import androidx.biometric.BiometricPrompt
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import com.example.compose.jetchat.components.AuthenticationFailedScreen
+import com.example.compose.jetchat.components.JetchatSplashScreen
 
 
 /**
@@ -151,40 +140,16 @@ class NavActivity : AppCompatActivity() {
                 }
             } else if (showAuthError != null) {
                 // Show error and allow retry
-                Box(
-                    Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Authentication failed: $showAuthError")
-                        Button(onClick = {
-                            showAuthError = null
-                            triedAuth = false // will trigger prompt again
-                        }) {
-                            Text("Retry")
-                        }
+                AuthenticationFailedScreen(
+                    errorMessage = showAuthError ?: "Please try again.",
+                    onRetry = {
+                        showAuthError = null
+                        triedAuth = false // will trigger prompt again
                     }
-                }
+                )
             } else {
                 // --- Splash/Loading/Lock screen ---
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background),
-                    contentAlignment = Alignment.Center
-                ) {
-                    // Replace with your app logo or any splash animation
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            "Welcome to JetChat",
-                            style = MaterialTheme.typography.headlineMedium
-                        )
-                        Spacer(Modifier.height(24.dp))
-                        CircularProgressIndicator()
-                        Spacer(Modifier.height(24.dp))
-                        Text("Please authenticate to continue")
-                    }
-                }
+                JetchatSplashScreen()
             }
         }
     }
@@ -225,6 +190,10 @@ class NavActivity : AppCompatActivity() {
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                     super.onAuthenticationError(errorCode, errString)
                     onAuthError(errString.toString())
+                }
+                override fun onAuthenticationFailed() {
+                    super.onAuthenticationFailed()
+                    // Optional: Toast or feedback
                 }
             })
 

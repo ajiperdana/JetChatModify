@@ -15,13 +15,13 @@
  */
 
 package com.example.compose.jetchat
-
 import android.util.Log
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+
 
 /**
  * Used to communicate between screens.

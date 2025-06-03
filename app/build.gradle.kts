@@ -1,3 +1,5 @@
+import org.gradle.kotlin.dsl.implementation
+
 /*
  * Copyright 2020 The Android Open Source Project
  *
@@ -112,7 +114,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.util)
     implementation(libs.androidx.compose.ui.viewbinding)
     implementation(libs.androidx.compose.ui.googlefonts)
-
+    implementation(libs.androidx.biometric)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
     androidTestImplementation(libs.junit)
@@ -123,4 +125,6 @@ dependencies {
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+
+
 }
